@@ -36,7 +36,7 @@ namespace Scraper
         // Takes a string array of text lines containing urls and params, 
         // and parses them into a list of validated and categorised URLs.
 
-        public static List<CategorisedURL> ParseTexLinesIntoCategorisedURLs(
+        public static List<CategorisedURL> ParseTextLinesIntoCategorisedURLs(
             List<string> textLines,
             string urlShouldContain,
             string replaceQueryParamsWith
@@ -172,7 +172,7 @@ namespace Scraper
             {
                 Log(
                     ConsoleColor.Gray,
-                    $"  New Image  : {product.id.PadLeft(8)} | {product.name.PadRight(50).Substring(0, 50)}"
+                    $"  New Image  : {product.id,8} | {product.name.PadRight(50).Substring(0, 50)}"
                 );
             }
             else if (responseMsg.Contains("already exists"))
