@@ -1,0 +1,2 @@
+# If a product size cannot be scraped or is misplaced in the wrong category, these values can be manually overridden here.
+# Place product IDs spaced next to product size and/or category=new-category-name, one product per line.
