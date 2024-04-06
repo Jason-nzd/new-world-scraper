@@ -246,7 +246,7 @@ namespace Scraper
                 Console.WriteLine(
                     $"  New Product: {scrapedProduct.id,-8} | " +
                     $"{scrapedProduct.name!.PadRight(40).Substring(0, 40)}" +
-                    $" | $ {scrapedProduct.currentPrice,5} | {scrapedProduct.category.Last()}"
+                    $" | $ {scrapedProduct.currentPrice,5} | {scrapedProduct.size}"
                 );
 
                 return UpsertResponse.NewProduct;
