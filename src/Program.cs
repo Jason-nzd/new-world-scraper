@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using static Scraper.CosmosDB;
 using static Scraper.Utilities;
 using System.Text.RegularExpressions;
+using cc = System.ConsoleColor;
 
 // New World Scraper
 // -----------------
@@ -53,7 +54,7 @@ namespace Scraper
             {
                 if (arg.Contains("db"))
                 {
-                    // dotnet run db = will scrape and upload data to a database
+                    // dotnet run db - will scrape and upload data to a database
                     uploadToDatabase = true;
 
                     // Connect to CosmosDB - end program if unable to connect
@@ -65,8 +66,8 @@ namespace Scraper
                 }
                 else
                 {
-                    // dotnet run = will scrape and display results in console
-                    Log(ConsoleColor.Yellow, $"\n(Dry Run mode on)");
+                    // dotnet run - will scrape and display results in console
+                    Log("(Dry Run Mode)", cc.Yellow);
                 }
 
                 // dotnet run db custom-query - will run a pre-defined sql query
@@ -76,11 +77,10 @@ namespace Scraper
                     return;
                 }
 
-                // dotnet run db images = will scrape, then upload both data and images
+                // dotnet run db images - will scrape, then upload both data and images
                 if (arg.Contains("images"))
                 {
                     uploadImages = true;
-                    Log(ConsoleColor.Yellow, $"\n(Uploading Images mode on)");
                 }
 
                 if (arg.Contains("headed"))
@@ -107,12 +107,19 @@ namespace Scraper
 
             // Parse and optimise each line into valid urls to be scraped
             List<CategorisedURL> categorisedUrls =
-                ParseTextLinesIntoCategorisedURLs(lines, "newworld.co.nz", "pg=1");
+                ParseTextLinesIntoCategorisedURLs(
+                    lines,
+                    urlShouldContain: "newworld.co.nz",
+                    replaceQueryParamsWith: "",
+                    queryOptionForEachPage: "pg=",
+                    incrementEachPageBy: 1
+                );
 
             // Log how many pages will be scraped
-            Log(ConsoleColor.Yellow,
+            Log(
                 $"{categorisedUrls.Count} pages to be scraped, " +
-                $"with {secondsDelayBetweenPageScrapes}s delay between each page scrape."
+                $"with {secondsDelayBetweenPageScrapes}s delay between each page scrape.",
+                cc.Yellow
             );
 
             // Open an initial page and allow geolocation set the desired store location
@@ -127,8 +134,9 @@ namespace Scraper
                     string url = categorisedUrls[i].url;
 
                     // Log current sequence of page scrapes, the total num of pages to scrape
-                    Log(ConsoleColor.Yellow,
-                        $"\nLoading Page [{i + 1}/{categorisedUrls.Count()}] {url.PadRight(112).Substring(12, 100)}"
+                    Log(
+                        $"\nLoading Page [{i + 1}/{categorisedUrls.Count()}] {url.PadRight(112).Substring(12, 100)}",
+                        cc.Yellow
                     );
 
                     // Try load page and wait for full content to dynamically load in
@@ -142,10 +150,11 @@ namespace Scraper
 
                     // Query all product card entries, and log how many were found
                     var productElements = await playwrightPage.QuerySelectorAllAsync("div.fs-product-card");
-                    Log(ConsoleColor.Yellow,
+                    Log(
                         $"{productElements.Count} Products Found \t" +
                         $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0')}\t" +
-                        $"Category: {categorisedUrls[i].category}"
+                        $"Category: {categorisedUrls[i].category}",
+                        cc.Yellow
                     );
 
                     // Create per-page counters for logging purposes
@@ -205,7 +214,7 @@ namespace Scraper
                             string unitString = scrapedProduct.unitPrice != null ?
                                 "$" + scrapedProduct.unitPrice + " /" + scrapedProduct.unitName : "";
 
-                            Console.WriteLine(
+                            Log(
                                 scrapedProduct!.id.PadLeft(9) + " | " +
                                 scrapedProduct.name!.PadRight(60).Substring(0, 60) + " | " +
                                 scrapedProduct.size!.PadRight(10) + " | $" +
@@ -218,14 +227,17 @@ namespace Scraper
                     if (uploadToDatabase)
                     {
                         // Log consolidated CosmosDB stats for entire page scrape
-                        Log(ConsoleColor.Cyan, $"{"CosmosDB:"} {newCount} new products, " +
-                        $"{priceUpdatedCount} prices updated, {nonPriceUpdatedCount} info updated, " +
-                        $"{upToDateCount} already up-to-date");
+                        Log(
+                            $"{"CosmosDB:"} {newCount} new products, " +
+                            $"{priceUpdatedCount} prices updated, {nonPriceUpdatedCount} info updated, " +
+                            $"{upToDateCount} already up-to-date",
+                            cc.Yellow
+                        );
                     }
                 }
                 catch (TimeoutException)
                 {
-                    Log(ConsoleColor.Red, "Unable to Load Web Page - timed out after 30 seconds");
+                    LogError("Unable to Load Web Page - timed out after 30 seconds");
                 }
                 catch (PlaywrightException e)
                 {
@@ -233,7 +245,7 @@ namespace Scraper
                 }
                 catch (Exception e)
                 {
-                    Console.Write(e.ToString());
+                    LogError(e.ToString());
                     return;
                 }
 
@@ -247,7 +259,7 @@ namespace Scraper
             // Try clean up playwright browser and other resources, then end program
             try
             {
-                Log(ConsoleColor.White, "Scraping Completed \n");
+                Log("Scraping Completed \n");
                 await playwrightPage!.Context.CloseAsync();
                 await playwrightPage.CloseAsync();
                 await browser!.CloseAsync();
@@ -278,8 +290,7 @@ namespace Scraper
             }
             catch (PlaywrightException)
             {
-                Log(
-                    ConsoleColor.Red,
+                LogError(
                     "Browser must be manually installed using: \n" +
                     "pwsh bin/Debug/net6.0/playwright.ps1 install\n"
                 );
@@ -504,7 +515,7 @@ namespace Scraper
             }
             catch (Exception e)
             {
-                Log(ConsoleColor.Red, $"Price scrape error: " + e.Message);
+                LogError($"Price scrape error: " + e.Message);
                 // Return null if any exceptions occurred during scraping
                 return null;
             }
@@ -526,12 +537,12 @@ namespace Scraper
                 Thread.Sleep(4000);
                 await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
 
-                Log(ConsoleColor.Yellow, $"Selected Store: {await GetStoreLocationName()}");
+                Log($"Selected Store: {await GetStoreLocationName()}", cc.Yellow);
                 return;
             }
             catch (Exception e)
             {
-                Log(ConsoleColor.Red, e.ToString());
+                LogError(e.ToString());
                 throw;
             }
         }
@@ -554,7 +565,7 @@ namespace Scraper
             }
             catch (PlaywrightException)
             {
-                Log(ConsoleColor.Red, "Error loading playwright browser, check firewall and network settings");
+                LogError("Error loading playwright browser, check firewall and network settings");
                 throw;
             }
             catch (Exception e)
@@ -584,23 +595,25 @@ namespace Scraper
                 await playwrightPage.Context.GrantPermissionsAsync(new string[] { "geolocation" });
 
                 // Log to console
-                Log(ConsoleColor.Yellow, $"Selecting closest store using geo-location: ({latitude}, {longitude})");
+                Log($"Selecting closest store using geo-location: ({latitude}, {longitude})", cc.Yellow);
             }
 
             // Return if no latitude and longitude are found
             catch (ArgumentNullException)
             {
-                Log(ConsoleColor.Yellow, "No geolocation found in appsettings.json, using default location");
+                Log("No geolocation found in appsettings.json, using default location", cc.Yellow);
                 return;
             }
 
             // Return if unable to parse values or for any other exception
             catch (Exception)
             {
-                Log(ConsoleColor.Yellow,
+                Log(
                     "Invalid geolocation found in appsettings.json, ensure format is:\n" +
                     "\"GEOLOCATION_LAT\": \"-41.21\"," +
-                    "\"GEOLOCATION_LONG\": \"174.91\"");
+                    "\"GEOLOCATION_LONG\": \"174.91\"",
+                    cc.Yellow
+                );
                 return;
             }
         }
@@ -632,12 +645,12 @@ namespace Scraper
 
                 if (excludeThisRequest)
                 {
-                    if (logToConsole) Log(ConsoleColor.Red, $"{req.Method} {req.ResourceType} - {trimmedUrl}");
+                    if (logToConsole) LogError($"{req.Method} {req.ResourceType} - {trimmedUrl}");
                     await route.AbortAsync();
                 }
                 else
                 {
-                    if (logToConsole) Log(ConsoleColor.White, $"{req.Method} {req.ResourceType} - {trimmedUrl}");
+                    if (logToConsole) Log($"{req.Method} {req.ResourceType} - {trimmedUrl}");
                     await route.ContinueAsync();
                 }
             });

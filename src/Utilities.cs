@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using static Scraper.Program;
+using cc = System.ConsoleColor;
 
 namespace Scraper
 {
@@ -39,8 +40,10 @@ namespace Scraper
         public static List<CategorisedURL> ParseTextLinesIntoCategorisedURLs(
             List<string> textLines,
             string urlShouldContain,
-            string replaceQueryParamsWith
-            )
+            string replaceQueryParamsWith,
+            string queryOptionForEachPage,
+            int incrementEachPageBy = 1
+        )
         {
             List<CategorisedURL> categorisedUrls = new List<CategorisedURL>();
 
@@ -92,17 +95,40 @@ namespace Scraper
                             catch (Exception)
                             {
                                 // If invalid numPages was specified, reset back to 1
-                                Console.WriteLine("Invalid number of pages: " + numPages);
+                                Log("Invalid number of pages: " + numPages);
                                 numPages = 1;
                             }
                         }
                     }
 
                     // Add each page as an individual URL to scrape.
-                    for (int i = 1; i <= numPages; i++)
+                    for (int page = 1; page <= numPages; page++)
                     {
+                        string newUrl;
+
+                        // For page1, just add the URL as-is.
+                        if (page == 1)
+                        {
+                            newUrl = url;
+                        }
+                        else
+                        {
+                            // For page2 and up, add the specified query option plus the increment to the URL
+
+                            // Examples: pg=2, pg=4, pg=6, etc, or 
+                            int pageIndex = incrementEachPageBy * page;
+
+                            // If incrementEachPageBy uses a high index, multiply by (page-1)
+                            // Examples: page1 = '', page2 = 'start=32', page3 = 'start=64', etc.
+                            if (incrementEachPageBy > 1)
+                            {
+                                pageIndex = incrementEachPageBy * (page - 1);
+                            }
+                            newUrl = url + queryOptionForEachPage + pageIndex.ToString();
+                        }
+
                         CategorisedURL perPageUrl = new CategorisedURL(
-                            url.Replace("pg=1", "pg=" + i.ToString()),
+                            newUrl,
                             category
                         );
                         categorisedUrls.Add(perPageUrl);
@@ -171,8 +197,8 @@ namespace Scraper
             if (responseMsg.Contains("S3 Upload of Full-Size and Thumbnail WebPs"))
             {
                 Log(
-                    ConsoleColor.Gray,
-                    $"  New Image  : {product.id.PadLeft(8)} | {product.name.PadRight(50).Substring(0, 50)}"
+                    $"  New Image  : {product.id,8} | {product.name.PadRight(50).Substring(0, 50)}",
+                    cc.Gray
                 );
             }
             else if (responseMsg.Contains("already exists"))
@@ -181,7 +207,7 @@ namespace Scraper
             }
             else if (responseMsg.Contains("greyscale"))
             {
-                Log(ConsoleColor.Gray, $"  Image {product.id} is greyscale, skipping...");
+                Log($"  Image {product.id} is greyscale, skipping...", cc.Gray);
             }
             else
             {
@@ -337,17 +363,13 @@ namespace Scraper
         public static string DeriveCategoryFromURL(string url)
         {
             int categoriesEndIndex = url.Contains("?") ? url.IndexOf("?") : url.Length;
-            string categoriesString =
-                url.Substring(
-                    0,
-                    categoriesEndIndex
-                );
+            string categoriesString = url.Substring(0, categoriesEndIndex);
             string lastCategory = categoriesString.Split("/").Last();
             return lastCategory;
         }
 
         // CheckProductOverrides()
-        // ---------------------------
+        // -----------------------
         // Checks a txt file to see if the product should use a manually overridden values.
         // Returns a SizeAndCategoryOverride object
 
@@ -368,7 +390,8 @@ namespace Scraper
                     // Then loop through any additional sections
                     for (int i = 1; i < splitLine.Length; i++)
                     {
-                        // If any section matches weight/size/volume symbols, use this size override
+                        // If any section matches weight/size/volume symbols,
+                        // use as size override
                         if (Regex.IsMatch(splitLine[i].ToLower(), @"\d+(g|kg|ml|l)"))
                         {
                             sizeOverrideFound = splitLine[i];
@@ -408,10 +431,10 @@ namespace Scraper
             }
             else
             {
-                // MatchedUnit is derived from product size, 450ml = ml
+                // MatchedUnit is derived from product size tag, 450ml = ml
                 matchedUnit = string.Join("", Regex.Matches(productSize.ToLower(), @"(g|kg|ml|l)\b"));
 
-                // Quantity is derived from product size, 450ml = 450
+                // Quantity is derived from product size tag, 450ml = 450
                 // Can include decimals, 1.5kg = 1.5
                 try
                 {
@@ -428,7 +451,8 @@ namespace Scraper
             if (matchedUnit.Length > 0 && quantity > 0)
             {
                 // Handle edge case where size contains a 'multiplier x sub-unit' - eg. 4 x 107mL
-                string matchMultipliedSizeString = Regex.Match(productSize, @"\d+\s?x\s?\d+").ToString();
+                string matchMultipliedSizeString = Regex.Match(
+                    productSize, @"\d+\s?x\s?\d+").ToString();
                 if (matchMultipliedSizeString.Length > 2)
                 {
                     int multiplier = int.Parse(matchMultipliedSizeString.Split("x")[0].Trim());
@@ -436,11 +460,12 @@ namespace Scraper
                     quantity = multiplier * subUnitSize;
                     originalUnitQuantity = quantity;
                     matchedUnit = matchedUnit.ToLower().Replace("x", "");
-                    //Log(ConsoleColor.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
+                    //Log(cc.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
                 }
 
                 // Handle edge case where size is in format '72g each 5pack'
-                matchMultipliedSizeString = Regex.Match(productSize, @"\d+(g|ml)\seach\s\d+pack").ToString();
+                matchMultipliedSizeString = Regex.Match(
+                    productSize, @"\d+(g|ml)\seach\s\d+pack").ToString();
                 if (matchMultipliedSizeString.Length > 2)
                 {
                     int multiplier = int.Parse(matchMultipliedSizeString.Split("each")[1].Trim());
@@ -448,7 +473,7 @@ namespace Scraper
                     quantity = multiplier * subUnitSize;
                     originalUnitQuantity = quantity;
                     matchedUnit = matchedUnit.ToLower().Replace("each", "");
-                    //Log(ConsoleColor.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
+                    //Log(cc.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
                 }
 
                 // If units are in grams, normalize quantity and convert to /kg
@@ -470,7 +495,7 @@ namespace Scraper
 
                 // Set per unit price, rounded to 2 decimal points
                 string roundedUnitPrice = Math.Round((decimal)(productPrice / quantity), 2).ToString();
-                //Console.WriteLine(productPrice + " / " + quantity + " = " + roundedUnitPrice + "/" + matchedUnit);
+                //Log(productPrice + " / " + quantity + " = " + roundedUnitPrice + "/" + matchedUnit);
 
                 // Return in format '450g cheese' = '0.45/kg/450'
                 return roundedUnitPrice + "/" + matchedUnit + "/" + originalUnitQuantity;
@@ -482,11 +507,11 @@ namespace Scraper
         // -----
         // Shorthand function for logging with provided colour
 
-        public static void Log(ConsoleColor color, string text)
+        public static void Log(string text, ConsoleColor color = cc.White)
         {
             Console.ForegroundColor = color;
-            Console.WriteLine(text);
-            Console.ForegroundColor = ConsoleColor.White;
+            Log(text);
+            Console.ForegroundColor = cc.White;
         }
 
         // LogError()
@@ -495,9 +520,9 @@ namespace Scraper
 
         public static void LogError(string text)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(text);
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = cc.Red;
+            Log(text);
+            Console.ForegroundColor = cc.White;
         }
     }
 }
