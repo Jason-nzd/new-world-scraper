@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using static Scraper.CosmosDB;
 using static Scraper.Utilities;
 using System.Text.RegularExpressions;
-using cc = System.ConsoleColor;
 
 // New World Scraper
 // -----------------
@@ -64,11 +63,6 @@ namespace Scraper
                         container: "products"
                     )) return;
                 }
-                else
-                {
-                    // dotnet run - will scrape and display results in console
-                    Log("(Dry Run Mode)", cc.Yellow);
-                }
 
                 // dotnet run db custom-query - will run a pre-defined sql query
                 if (arg.Contains("custom-query"))
@@ -93,6 +87,11 @@ namespace Scraper
                     useHeadlessBrowser = true;
                 }
             }
+            if (!uploadToDatabase)
+            {
+                // dotnet run - will scrape and display results in console
+                LogWarn("(Dry Run Mode)");
+            }
 
             // Start Stopwatch for logging purposes
             Stopwatch stopwatch = new Stopwatch();
@@ -116,10 +115,9 @@ namespace Scraper
                 );
 
             // Log how many pages will be scraped
-            Log(
+            LogWarn(
                 $"{categorisedUrls.Count} pages to be scraped, " +
-                $"with {secondsDelayBetweenPageScrapes}s delay between each page scrape.",
-                cc.Yellow
+                $"with {secondsDelayBetweenPageScrapes}s delay between each page scrape."
             );
 
             // Open an initial page and allow geolocation set the desired store location
@@ -134,9 +132,8 @@ namespace Scraper
                     string url = categorisedUrls[i].url;
 
                     // Log current sequence of page scrapes, the total num of pages to scrape
-                    Log(
-                        $"\nLoading Page [{i + 1}/{categorisedUrls.Count()}] {url.PadRight(112).Substring(12, 100)}",
-                        cc.Yellow
+                    LogWarn(
+                        $"\nLoading Page [{i + 1}/{categorisedUrls.Count()}] {url.PadRight(112).Substring(12, 100)}"
                     );
 
                     // Try load page and wait for full content to dynamically load in
@@ -153,8 +150,7 @@ namespace Scraper
                     Log(
                         $"{productElements.Count} Products Found \t" +
                         $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0')}\t" +
-                        $"Category: {categorisedUrls[i].category}",
-                        cc.Yellow
+                        $"Category: {categorisedUrls[i].category}"
                     );
 
                     // Create per-page counters for logging purposes
@@ -227,11 +223,10 @@ namespace Scraper
                     if (uploadToDatabase)
                     {
                         // Log consolidated CosmosDB stats for entire page scrape
-                        Log(
+                        LogWarn(
                             $"{"CosmosDB:"} {newCount} new products, " +
                             $"{priceUpdatedCount} prices updated, {nonPriceUpdatedCount} info updated, " +
-                            $"{upToDateCount} already up-to-date",
-                            cc.Yellow
+                            $"{upToDateCount} already up-to-date"
                         );
                     }
                 }
@@ -537,7 +532,7 @@ namespace Scraper
                 Thread.Sleep(4000);
                 await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
 
-                Log($"Selected Store: {await GetStoreLocationName()}", cc.Yellow);
+                LogWarn($"Selected Store: {await GetStoreLocationName()}");
                 return;
             }
             catch (Exception e)
@@ -595,24 +590,23 @@ namespace Scraper
                 await playwrightPage.Context.GrantPermissionsAsync(new string[] { "geolocation" });
 
                 // Log to console
-                Log($"Selecting closest store using geo-location: ({latitude}, {longitude})", cc.Yellow);
+                LogWarn($"Selecting closest store using geo-location: ({latitude}, {longitude})");
             }
 
             // Return if no latitude and longitude are found
             catch (ArgumentNullException)
             {
-                Log("No geolocation found in appsettings.json, using default location", cc.Yellow);
+                LogWarn("No geolocation found in appsettings.json, using default location");
                 return;
             }
 
             // Return if unable to parse values or for any other exception
             catch (Exception)
             {
-                Log(
+                LogWarn(
                     "Invalid geolocation found in appsettings.json, ensure format is:\n" +
                     "\"GEOLOCATION_LAT\": \"-41.21\"," +
-                    "\"GEOLOCATION_LONG\": \"174.91\"",
-                    cc.Yellow
+                    "\"GEOLOCATION_LONG\": \"174.91\""
                 );
                 return;
             }

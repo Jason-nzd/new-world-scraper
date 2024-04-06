@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using static Scraper.Program;
-using cc = System.ConsoleColor;
 
 namespace Scraper
 {
@@ -198,7 +197,7 @@ namespace Scraper
             {
                 Log(
                     $"  New Image  : {product.id,8} | {product.name.PadRight(50).Substring(0, 50)}",
-                    cc.Gray
+                    ConsoleColor.Gray
                 );
             }
             else if (responseMsg.Contains("already exists"))
@@ -207,7 +206,7 @@ namespace Scraper
             }
             else if (responseMsg.Contains("greyscale"))
             {
-                Log($"  Image {product.id} is greyscale, skipping...", cc.Gray);
+                Log($"  Image {product.id} is greyscale, skipping...", ConsoleColor.Gray);
             }
             else
             {
@@ -460,7 +459,7 @@ namespace Scraper
                     quantity = multiplier * subUnitSize;
                     originalUnitQuantity = quantity;
                     matchedUnit = matchedUnit.ToLower().Replace("x", "");
-                    //Log(cc.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
+                    //Log(ConsoleColor.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
                 }
 
                 // Handle edge case where size is in format '72g each 5pack'
@@ -473,7 +472,7 @@ namespace Scraper
                     quantity = multiplier * subUnitSize;
                     originalUnitQuantity = quantity;
                     matchedUnit = matchedUnit.ToLower().Replace("each", "");
-                    //Log(cc.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
+                    //Log(ConsoleColor.DarkGreen, productSize + " = (" + quantity + ") (" + matchedUnit + ")");
                 }
 
                 // If units are in grams, normalize quantity and convert to /kg
@@ -507,11 +506,11 @@ namespace Scraper
         // -----
         // Shorthand function for logging with provided colour
 
-        public static void Log(string text, ConsoleColor color = cc.White)
+        public static void Log(string text, ConsoleColor color = ConsoleColor.White)
         {
             Console.ForegroundColor = color;
-            Log(text);
-            Console.ForegroundColor = cc.White;
+            Console.WriteLine(text);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         // LogError()
@@ -520,9 +519,20 @@ namespace Scraper
 
         public static void LogError(string text)
         {
-            Console.ForegroundColor = cc.Red;
-            Log(text);
-            Console.ForegroundColor = cc.White;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(text);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        // LogWarn()
+        // ----------
+        // Shorthand function for logging with yellow colour
+
+        public static void LogWarn(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(text);
+            Console.ForegroundColor = ConsoleColor.White;
         }
     }
 }

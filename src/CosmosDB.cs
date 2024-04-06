@@ -2,7 +2,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using static Scraper.Program;
 using static Scraper.Utilities;
-using cc = System.ConsoleColor;
 
 namespace Scraper
 {
@@ -39,7 +38,7 @@ namespace Scraper
                     throughput: 400
                 );
 
-                Log($"\n(Connected to CosmosDB) {cosmosClient.Endpoint}", cc.Yellow);
+                Log($"\n(Connected to CosmosDB) {cosmosClient.Endpoint}", ConsoleColor.Yellow);
                 return true;
             }
             catch (CosmosException e)
@@ -178,7 +177,7 @@ namespace Scraper
                 Log(
                     $"{priceTrendText} {dbProduct.name.PadRight(51).Substring(0, 51)} | " +
                     $"${dbProduct.currentPrice} > ${scrapedProduct.currentPrice}",
-                    priceTrendingDown ? cc.Green : cc.Red
+                    priceTrendingDown ? ConsoleColor.Green : ConsoleColor.Red
                 );
 
                 // Return new product with updated data
