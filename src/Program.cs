@@ -23,7 +23,7 @@ namespace Scraper
             string name,
             string? size,
             float currentPrice,
-            string category,
+            string[] category,
             string sourceSite,
             DatedPrice[] priceHistory,
             DateTime lastUpdated,
@@ -69,9 +69,16 @@ namespace Scraper
                     Log(ConsoleColor.Yellow, $"\n(Dry Run mode on)");
                 }
 
+                // dotnet run db custom-query - will run a pre-defined sql query
+                if (arg.Contains("custom-query"))
+                {
+                    await CustomQuery();
+                    return;
+                }
+
+                // dotnet run db images = will scrape, then upload both data and images
                 if (arg.Contains("images"))
                 {
-                    // dotnet run db images = will scrape, then upload both data and images
                     uploadImages = true;
                     Log(ConsoleColor.Yellow, $"\n(Uploading Images mode on)");
                 }
@@ -152,7 +159,7 @@ namespace Scraper
                             await ScrapeProductElementToRecord(
                                 productElement,
                                 url,
-                                categorisedUrls[i].category
+                                new string[] { categorisedUrls[i].category }
                             );
 
                         if (uploadToDatabase && scrapedProduct != null)
@@ -304,7 +311,7 @@ namespace Scraper
         private async static Task<Product?> ScrapeProductElementToRecord(
             IElementHandle productElement,
             string sourceUrl,
-            string category
+            string[] category
         )
         {
             // Product Name
@@ -441,7 +448,7 @@ namespace Scraper
 
                 // If override lists a sizes or category, use these instead of the scraped values.
                 if (overrides.size != "") size = overrides.size;
-                if (overrides.category != "") category = overrides.category;
+                if (overrides.category != "") category = new string[] { overrides.category };
 
                 // Set source website
                 string sourceSite = "newworld.co.nz";
