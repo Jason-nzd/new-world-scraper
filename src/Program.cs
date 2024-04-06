@@ -140,10 +140,12 @@ namespace Scraper
                     await playwrightPage!.GotoAsync(url);
                     await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
 
-                    // Wait and page down to further trigger any lazy loads
-                    await playwrightPage.Keyboard.PressAsync("PageDown");
-                    Thread.Sleep(1000);
-                    await playwrightPage.Keyboard.PressAsync("PageDown");
+                    // Wait and loop a few page scroll downs to further trigger any lazy loads
+                    for (int j = 0; j < 9; j++)
+                    {
+                        await playwrightPage.Keyboard.PressAsync("PageDown");
+                        Thread.Sleep(120);
+                    }
 
                     // Query all product card entries, and log how many were found
                     var productElements = await playwrightPage.QuerySelectorAllAsync("div.fs-product-card");
@@ -328,9 +330,11 @@ namespace Scraper
                 var aTag = await productElement.QuerySelectorAsync("h3");
                 name = await aTag!.InnerTextAsync();
             }
-            catch
+            catch (Exception e)
             {
-                throw new Exception("Couldn't scrape name from h3 tag");
+                LogError("Couldn't scrape name from h3 tag\n" + e.GetType());
+                // Return null if any exceptions occurred during scraping
+                return null;
             }
 
             // Image URL & Product ID
@@ -345,9 +349,10 @@ namespace Scraper
                 var imageFilename = imgUrl!.Split("/").Last();  // get original ID from image url
                 id = "N" + imageFilename.Split(".").First();    // prepend N to ID
             }
-            catch
+            catch (Exception e)
             {
-                throw new Exception("Couldn't scrape image URL from .fs-product-card__product-image div");
+                LogError($"{name} - Couldn't scrape image URL\n{e.GetType()}");
+                return null;
             }
 
             // Price
@@ -374,9 +379,15 @@ namespace Scraper
                     currentPrice = float.Parse(singleItemInnerText.Replace("Single Price $", ""));
                 }
             }
-            catch
+            catch (NullReferenceException)
             {
-                throw new Exception("Couldn't scrape price info");
+                // No price is listed for this product, so can ignore
+                return null;
+            }
+            catch (Exception e)
+            {
+                LogError($"{name} - Couldn't scrape price info\n{e.GetType()}");
+                return null;
             }
 
             // Size
@@ -390,9 +401,10 @@ namespace Scraper
                 if (size == "kg") size = "per kg";
 
             }
-            catch
+            catch (Exception e)
             {
-                throw new Exception("Couldn't scrape size");
+                LogError($"{name} - Couldn't scrape size\n{e.GetType()}");
+                return null;
             }
 
             try
@@ -438,9 +450,10 @@ namespace Scraper
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
-                throw new Exception("Couldn't derive unit price");
+                LogError($"{name} - Couldn't derive unit price\n{e.GetType()}");
+                return null;
             }
 
             try
@@ -510,7 +523,7 @@ namespace Scraper
             }
             catch (Exception e)
             {
-                LogError($"Price scrape error: " + e.Message);
+                LogError($"{name} - Price scrape error: \n{e.GetType()}");
                 // Return null if any exceptions occurred during scraping
                 return null;
             }
