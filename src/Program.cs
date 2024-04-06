@@ -100,7 +100,7 @@ namespace Scraper
 
             // Parse and optimise each line into valid urls to be scraped
             List<CategorisedURL> categorisedUrls =
-                ParseTexLinesIntoCategorisedURLs(lines, "newworld.co.nz", "pg=1");
+                ParseTextLinesIntoCategorisedURLs(lines, "newworld.co.nz", "pg=1");
 
             // Log how many pages will be scraped
             Log(ConsoleColor.Yellow,
@@ -127,6 +127,11 @@ namespace Scraper
                     // Try load page and wait for full content to dynamically load in
                     await playwrightPage!.GotoAsync(url);
                     await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
+
+                    // Wait and page down to further trigger any lazy loads
+                    await playwrightPage.Keyboard.PressAsync("PageDown");
+                    Thread.Sleep(1000);
+                    await playwrightPage.Keyboard.PressAsync("PageDown");
 
                     // Query all product card entries, and log how many were found
                     var productElements = await playwrightPage.QuerySelectorAllAsync("div.fs-product-card");
@@ -261,7 +266,7 @@ namespace Scraper
                 playwrightPage = await browser.NewPageAsync();
 
                 // Route exclusions, such as ads, trackers, etc
-                if (headless) await RoutePlaywrightExclusions();
+                await RoutePlaywrightExclusions();
                 return;
             }
             catch (PlaywrightException)
@@ -279,8 +284,7 @@ namespace Scraper
         public async static Task<string> GetHiresImageUrl(IElementHandle productElement)
         {
             // Image URL
-            var aTag = await productElement.QuerySelectorAsync("a");
-            var imgDiv = await aTag!.QuerySelectorAsync("div div");
+            var imgDiv = await productElement.QuerySelectorAsync(".fs-product-card__product-image");
             string? imgUrl = await imgDiv!.GetAttributeAsync("data-src-s");
 
             // Check if image is a valid product image
@@ -304,7 +308,7 @@ namespace Scraper
         )
         {
             // Product Name
-            string name = "";
+            string name;
             try
             {
                 // The first h3 tag of each productElement contains the product name
@@ -317,7 +321,7 @@ namespace Scraper
             }
 
             // Image URL & Product ID
-            string id = "";
+            string id;
             try
             {
                 // Image Url
@@ -334,21 +338,20 @@ namespace Scraper
             }
 
             // Price
-            float currentPrice = 0;
+            float currentPrice;
             try
             {
-                // Start with footer div
-                var cardFooter = await productElement.QuerySelectorAsync(".js-product-card-footer");
+                var priceContainerDiv = await productElement.QuerySelectorAsync(".fs-price-lockup");
 
-                // Get dollars and cents from 2 separate spans,
-                var dollarSpan = await cardFooter!.QuerySelectorAsync(".fs-price-lockup__dollars");
+                // Get dollars and cents from 2 separate spans
+                var dollarSpan = await priceContainerDiv!.QuerySelectorAsync(".fs-price-lockup__dollars");
                 string dollarString = await dollarSpan!.InnerHTMLAsync();
 
-                var centSpan = await cardFooter!.QuerySelectorAsync(".fs-price-lockup__cents");
+                var centSpan = await priceContainerDiv!.QuerySelectorAsync(".fs-price-lockup__cents");
                 string centString = await centSpan!.InnerHTMLAsync();
 
                 // Combine dollar and cent strings, then parse into a float
-                currentPrice = float.Parse(dollarString + "." + centString);
+                currentPrice = float.Parse(dollarString.Trim() + "." + centString.Trim());
 
                 // If multi-item and single-item prices are shown, override with the single-item price
                 var singleItemSpan = await productElement.QuerySelectorAsync(".fs-product-card__single-price");
@@ -364,7 +367,7 @@ namespace Scraper
             }
 
             // Size
-            string size = "";
+            string size;
             try
             {
                 // The first <p><span> tag of each element contains the product size
@@ -514,6 +517,7 @@ namespace Scraper
 
                 // Wait for page to automatically reload with the new geo-location
                 Thread.Sleep(4000);
+                await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
 
                 Log(ConsoleColor.Yellow, $"Selected Store: {await GetStoreLocationName()}");
                 return;
@@ -597,6 +601,7 @@ namespace Scraper
         // RoutePlaywrightExclusions()
         // ---------------------------
         // Excludes playwright from downloading unwanted resources such as ads, trackers, images, etc.
+
         private static async Task RoutePlaywrightExclusions(bool logToConsole = false)
         {
             // Define excluded types and urls to reject
