@@ -1,7 +1,7 @@
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-vegetables?pg=1 pages=3
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-fruit?pg=1 pages=2
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-fruit?pg=1 pages=2 category=fruit
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-salads?pg=1 category=salads-coleslaw
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-fruit?pg=1 category=fresh-fruit
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-fruit?pg=1 category=fruit
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-vegetables?pg=1 category=fresh-vegetables pages=3
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/salad-bags?pg=1 category=salads-coleslaw pages=2
 
@@ -14,6 +14,9 @@ https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/prepack
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/prepacked-pork?pg=1 category=pork
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/prepacked-sausages?pg=1 category=sausages pages=2
 
+
+https://www.newworld.co.nz/shop/category/pantry/confectionery/chocolate-blocks?pg=1 category=chocolate pages=3
+
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/dairy--eggs/eggs?pg=1
 
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/dairy--eggs/fresh-milk?pg=1 category=milk
@@ -22,6 +25,6 @@ https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/desserts/ic
 
 https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/frozen-foods/frozen-fries--potatoes?pg=1 category=frozen-chips pages=2
 
-https://www.newworld.co.nz/shop/category/pantry/confectionery/chocolate-blocks?pg=1 category=chocolate pages=3
+
 
 https://www.newworld.co.nz/shop/category/pantry/pasta-rice--noodles?s=popularity&sd=0&f=tags%3DBasmati%2520Rices%257CInstant%2520Rices%257CJasmine%2520Rices%257CLong%2520Grain%2520Rices%257CRice%2520Meals%257CShort%2520%2526%2520Medium%2520Grain%2520Rices category=rice pages=3
