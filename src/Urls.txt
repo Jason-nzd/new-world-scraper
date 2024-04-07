@@ -5,6 +5,10 @@ https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetable
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-vegetables?pg=1 category=fresh-vegetables pages=3
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/salad-bags?pg=1 category=salads-coleslaw pages=2
 
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/bakery/sliced-bread category=bread
+
+https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/cheese?pg=1
+
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/fresh-beef--lamb?pg=1 category=beef-lamb pages=2
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/fresh-chicken--poultry?pg=1 category=chicken
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/fresh-pork?pg=1 category=pork
