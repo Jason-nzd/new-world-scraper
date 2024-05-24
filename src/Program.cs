@@ -42,7 +42,8 @@ namespace Scraper
 
         // Get config from appsettings.json
         public static IConfiguration config = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true) //load base settings
+            .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true) //load local settings
             .AddEnvironmentVariables()
             .Build();
 
@@ -591,6 +592,13 @@ namespace Scraper
             // Try get latitude and longitude from appsettings.json
             try
             {
+                if (
+                    config.GetSection("GEOLOCATION_LAT").Value == "" ||
+                    config.GetSection("GEOLOCATION_LONG").Value == ""
+                    )
+                {
+                    throw new ArgumentNullException();
+                }
                 latitude = float.Parse(config.GetSection("GEOLOCATION_LAT").Value!);
                 longitude = float.Parse(config.GetSection("GEOLOCATION_LONG").Value!);
 
@@ -609,7 +617,7 @@ namespace Scraper
             // Return if no latitude and longitude are found
             catch (ArgumentNullException)
             {
-                LogWarn("No geolocation found in appsettings.json, using default location");
+                LogWarn("Using default location");
                 return;
             }
 
