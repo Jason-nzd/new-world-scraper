@@ -540,7 +540,7 @@ namespace Scraper
                 await SetGeoLocation();
 
                 // Goto any page to trigger geo-location detection
-                await playwrightPage!.GotoAsync("https://www.newworld.co.nz/shop/specials");
+                await playwrightPage!.GotoAsync("https://www.newworld.co.nz/shop/category/featured?pg=1");
 
                 // Wait for page to automatically reload with the new geo-location
                 Thread.Sleep(4000);
