@@ -134,22 +134,25 @@ namespace Scraper
 
                     // Log current sequence of page scrapes, the total num of pages to scrape
                     LogWarn(
-                        $"\nLoading Page [{i + 1}/{categorisedUrls.Count()}] {url.PadRight(112).Substring(12, 100)}"
+                        $"\n[{i + 1}/{categorisedUrls.Count()}] {url.Substring(12)}"
                     );
 
                     // Try load page and wait for full content to dynamically load in
                     await playwrightPage!.GotoAsync(url);
-                    await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
 
-                    // Wait and loop a few page scroll downs to further trigger any lazy loads
-                    for (int j = 0; j < 9; j++)
+                    // Scroll down page to trigger lazy loading
+                    for (int scrollLoop = 0; scrollLoop < 3; scrollLoop++)
                     {
                         await playwrightPage.Keyboard.PressAsync("PageDown");
                         Thread.Sleep(120);
                     }
 
+                    // Wait for prices to load in
+                    string price = await playwrightPage.GetByTestId("price-dollars").Last.InnerHTMLAsync();
+
                     // Query all product card entries, and log how many were found
-                    var productElements = await playwrightPage.QuerySelectorAllAsync("div.fs-product-card");
+                    var productElements = await playwrightPage.QuerySelectorAllAsync("#search > div > div:nth-child(4) > div");
+
                     Log(
                         $"{productElements.Count} Products Found \t" +
                         $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0')}\t" +
@@ -300,8 +303,9 @@ namespace Scraper
         public async static Task<string> GetHiresImageUrl(IElementHandle productElement)
         {
             // Image URL
-            var imgDiv = await productElement.QuerySelectorAsync(".fs-product-card__product-image");
-            string? imgUrl = await imgDiv!.GetAttributeAsync("data-src-s");
+            // Image Url - The last img tag contains the product image
+            var imgDiv = await productElement.QuerySelectorAllAsync("a > div > img");
+            string? imgUrl = await imgDiv.Last().GetAttributeAsync("src");
 
             // Check if image is a valid product image
             if (!imgUrl!.Contains("200x200")) return "";
@@ -323,62 +327,61 @@ namespace Scraper
             string[] category
         )
         {
-            // Product Name
-            string name;
-            try
+            // Product Name, Size, Dollar and Cent Price as strings
+            string name = "", size = "", dollarString = "", centString = "";
+
+            // Get all <p> elements, then loop through each and assign values 
+            // based on the data-testid attribute.
+            var allPElements = await productElement.QuerySelectorAllAsync("p");
+            foreach (var p in allPElements)
             {
-                // The first h3 tag of each productElement contains the product name
-                var aTag = await productElement.QuerySelectorAsync("h3");
-                name = await aTag!.InnerTextAsync();
-            }
-            catch (Exception e)
-            {
-                LogError("Couldn't scrape name from h3 tag\n" + e.GetType());
-                // Return null if any exceptions occurred during scraping
-                return null;
+                string? pType = "";
+                // Try get a data-testid attribute,
+                try
+                {
+                    pType = await p.GetAttributeAsync("data-testid");
+                }
+                // If not found, catch the exception and skip to the next <p>
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                switch (pType)
+                {
+                    // Scrape name
+                    case "product-title":
+                        name = await p.InnerTextAsync();
+                        break;
+
+                    // Scrape size
+                    case "product-subtitle":
+                        size = await p.InnerTextAsync();
+                        size = size.Replace("l", "L");  // capitalize L for litres
+                        if (size == "kg") size = "per kg";
+                        break;
+
+                    // Scrape price dollar and cent elements.
+                    // If a multi-buy and single-buy price exists, the single-buy price will 
+                    // happen later in the loop and will be set as the final price
+                    case "price-dollars":
+                        dollarString = await p.InnerTextAsync();
+                        break;
+
+                    case "price-cents":
+                        centString = await p.InnerTextAsync();
+                        break;
+
+                    default:
+                        break;
+                }
             }
 
-            // Image URL & Product ID
-            string id;
-            try
-            {
-                // Image Url
-                var imgDiv = await productElement.QuerySelectorAsync(".fs-product-card__product-image");
-                string? imgUrl = await imgDiv!.GetAttributeAsync("data-src-s");
-
-                // ID
-                var imageFilename = imgUrl!.Split("/").Last();  // get original ID from image url
-                id = "N" + imageFilename.Split(".").First();    // prepend N to ID
-            }
-            catch (Exception e)
-            {
-                LogError($"{name} - Couldn't scrape image URL\n{e.GetType()}");
-                return null;
-            }
-
-            // Price
+            // Price - Combine dollar and cent strings, then parse into a float
             float currentPrice;
             try
             {
-                var priceContainerDiv = await productElement.QuerySelectorAsync(".fs-price-lockup");
-
-                // Get dollars and cents from 2 separate spans
-                var dollarSpan = await priceContainerDiv!.QuerySelectorAsync(".fs-price-lockup__dollars");
-                string dollarString = await dollarSpan!.InnerHTMLAsync();
-
-                var centSpan = await priceContainerDiv!.QuerySelectorAsync(".fs-price-lockup__cents");
-                string centString = await centSpan!.InnerHTMLAsync();
-
-                // Combine dollar and cent strings, then parse into a float
                 currentPrice = float.Parse(dollarString.Trim() + "." + centString.Trim());
-
-                // If multi-item and single-item prices are shown, override with the single-item price
-                var singleItemSpan = await productElement.QuerySelectorAsync(".fs-product-card__single-price");
-                if (singleItemSpan != null)
-                {
-                    string singleItemInnerText = await singleItemSpan.InnerTextAsync();
-                    currentPrice = float.Parse(singleItemInnerText.Replace("Single Price $", ""));
-                }
             }
             catch (NullReferenceException)
             {
@@ -391,71 +394,73 @@ namespace Scraper
                 return null;
             }
 
-            // Size
-            string size;
+            // Image URL & Product ID
+            string id;
             try
             {
-                // The first <p><span> tag of each element contains the product size
-                var sizeSpan = await productElement.QuerySelectorAsync("p span");
-                size = await sizeSpan!.InnerHTMLAsync();
-                size = size.Replace("l", "L");  // capitalize L for litres
-                if (size == "kg") size = "per kg";
+                // Image Url - The last img tag contains the product image
+                var imgDiv = await productElement.QuerySelectorAllAsync("a > div > img");
+                string? imgUrl = await imgDiv.Last().GetAttributeAsync("src");
 
+                // ID - get product ID from image filename
+                var imageFilename = imgUrl!.Split("/").Last();  // get the last /section of the url
+                imageFilename = imageFilename.Split("?").First(); // remove any query params
+                id = "N" + imageFilename.Split(".").First();    // prepend N to ID
             }
             catch (Exception e)
             {
-                LogError($"{name} - Couldn't scrape size\n{e.GetType()}");
+                LogError($"{name} - Couldn't scrape image URL\n{e.GetType()}");
                 return null;
             }
 
-            try
-            {
-                // If product size is listed as 'ea' or 'pk' and a unit price is listed,
-                // try to derive the full product size from the unit price
-                var unitPriceDiv = await productElement.QuerySelectorAsync(".fs-product-card__price-per-unit");
-                if (Regex.IsMatch(size, @"\d?(ea|pk)\b") && unitPriceDiv != null)
-                {
-                    // unitPriceFullString contains the full unit price format: $2.40/100g
-                    string unitPriceFullString = await unitPriceDiv.InnerTextAsync();
+            // try
+            // {
+            //     // If product size is listed as 'ea' or 'pk' and a unit price is listed,
+            //     // try to derive the full product size from the unit price
+            //     var unitPriceDiv = await productElement.QuerySelectorAsync(".fs-product-card__price-per-unit");
+            //     if (Regex.IsMatch(size, @"\d?(ea|pk)\b") && unitPriceDiv != null)
+            //     {
+            //         // unitPriceFullString contains the full unit price format: $2.40/100g
+            //         string unitPriceFullString = await unitPriceDiv.InnerTextAsync();
 
-                    // unitPrice contains just the price, such as 2.40
-                    float unitPricing = float.Parse(unitPriceFullString.Split("/")[0].Replace("$", ""));
+            //         // unitPrice contains just the price, such as 2.40
+            //         float unitPricing = float.Parse(unitPriceFullString.Split("/")[0].Replace("$", ""));
 
-                    // unitPriceQuantity contains just the unit quantity, such as 100
-                    string unitPriceQuantityString =
-                        Regex.Match(unitPriceFullString.Split("/")[1], @"\d+").ToString();
+            //         // unitPriceQuantity contains just the unit quantity, such as 100
+            //         string unitPriceQuantityString =
+            //             Regex.Match(unitPriceFullString.Split("/")[1], @"\d+").ToString();
 
-                    // If no unit quantity digits are found, default to 1 unit
-                    if (unitPriceQuantityString == "") unitPriceQuantityString = "1";
-                    float unitPriceQuantity = float.Parse(unitPriceQuantityString);
+            //         // If no unit quantity digits are found, default to 1 unit
+            //         if (unitPriceQuantityString == "") unitPriceQuantityString = "1";
+            //         float unitPriceQuantity = float.Parse(unitPriceQuantityString);
 
-                    // unitPriceName will end up as g|kg|ml|L
-                    string unitPriceName =
-                        Regex.Match(unitPriceFullString.Split("/")[1].ToLower(), @"(g|kg|ml|l)").ToString();
-                    unitPriceName = unitPriceName.Replace("l", "L");
+            //         // unitPriceName will end up as g|kg|ml|L
+            //         string unitPriceName =
+            //             Regex.Match(unitPriceFullString.Split("/")[1].ToLower(), @"(g|kg|ml|l)").ToString();
+            //         unitPriceName = unitPriceName.Replace("l", "L");
 
-                    // Find how many units fit within the full product price
-                    float numUnitsForFullProductSize = currentPrice / unitPricing;
+            //         // Find how many units fit within the full product price
+            //         float numUnitsForFullProductSize = currentPrice / unitPricing;
 
-                    // Multiply the unit price quantity to get the full product size
-                    float fullProductSize = numUnitsForFullProductSize * unitPriceQuantity;
+            //         // Multiply the unit price quantity to get the full product size
+            //         float fullProductSize = numUnitsForFullProductSize * unitPriceQuantity;
 
-                    // Round product size based on what unit is used, then set final product size
-                    if (unitPriceName == "g" || unitPriceName == "ml")
-                    {
-                        size = Math.Round(fullProductSize) + unitPriceName;
-                    }
-                    else if (unitPriceName == "kg" || unitPriceName == "L")
-                    {
-                        size = Math.Round(fullProductSize, 2) + unitPriceName;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                LogError($"{name} - Couldn't derive unit price\n{e.GetType()}");
-                return null;
-            }
+            //         // Round product size based on what unit is used, then set final product size
+            //         if (unitPriceName == "g" || unitPriceName == "ml")
+            //         {
+            //             size = Math.Round(fullProductSize) + unitPriceName;
+            //         }
+            //         else if (unitPriceName == "kg" || unitPriceName == "L")
+            //         {
+            //             size = Math.Round(fullProductSize, 2) + unitPriceName;
+            //         }
+            //     }
+            // }
+            // catch (Exception e)
+            // {
+            //     LogError($"{name} - Couldn't derive unit price\n{e.GetType()}");
+            //     return null;
+            // }
 
             try
             {
@@ -540,11 +545,11 @@ namespace Scraper
                 await SetGeoLocation();
 
                 // Goto any page to trigger geo-location detection
-                await playwrightPage!.GotoAsync("https://www.newworld.co.nz/shop/category/featured?pg=1");
+                await playwrightPage!.GotoAsync("https://www.newworld.co.nz/");
 
                 // Wait for page to automatically reload with the new geo-location
                 Thread.Sleep(4000);
-                await playwrightPage.WaitForSelectorAsync("span.fs-price-lockup__cents");
+                await playwrightPage.WaitForSelectorAsync("div.js-quick-links");
 
                 LogWarn($"Selected Store: {await GetStoreLocationName()}");
                 return;
@@ -640,9 +645,9 @@ namespace Scraper
         private static async Task RoutePlaywrightExclusions(bool logToConsole = false)
         {
             // Define excluded types and urls to reject
-            string[] typeExclusions = { "image", "stylesheet", "media", "font", "other" };
-            string[] urlExclusions = { "googleoptimize.com", "gtm.js", "visitoridentification.js",
-                "js-agent.newrelic.com", "challenge-platform" };
+            string[] typeExclusions = { "image", "media", "font", "other" };
+            string[] urlExclusions = { "googleoptimize.com", "gtm.js", "visitoridentification.js" +
+            "js-agent.newrelic.com", "challenge-platform" };
             List<string> exclusions = urlExclusions.ToList<string>();
 
             // Route with exclusions processed
