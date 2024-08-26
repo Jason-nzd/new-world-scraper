@@ -302,16 +302,15 @@ namespace Scraper
         // Get the hi-res image url from the Playwright element
         public async static Task<string> GetHiresImageUrl(IElementHandle productElement)
         {
-            // Image URL
-            // Image Url - The last img tag contains the product image
+            // Image URL - The last img tag contains the product image
             var imgDiv = await productElement.QuerySelectorAllAsync("a > div > img");
             string? imgUrl = await imgDiv.Last().GetAttributeAsync("src");
 
-            // Check if image is a valid product image
-            if (!imgUrl!.Contains("200x200")) return "";
+            // Check if image is a valid product image, otherwise return blank
+            if (!imgUrl!.Contains("fsimg.co.nz/product/retail/fan/image/")) return "";
 
-            // Swap url params to get hi-res version
-            imgUrl = imgUrl!.Replace("200x200", "master");
+            // Swap url from 200x200 or 400x400 to master to get the hi-res version
+            imgUrl = Regex.Replace(imgUrl, @"\d00x\d00", "master");
 
             return imgUrl;
         }
