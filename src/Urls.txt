@@ -12,11 +12,11 @@ https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/bakery/specialty
 
 https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/cheese?pg=1
 
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?s=popularity&sd=0&f=tags%3DFresh%2520Beef%2520%2526%2520Lamb%257CPrePacked%2520Beef%2520%2526%2520Lamb category=beef-lamb pages=3
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?s=popularity&sd=0&f=tags%3DFresh%2520Chicken%2520%2526%2520Poultry%257CPrePacked%2520Chicken%2520%2526%2520Poultry category=chicken pages=2
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?s=popularity&sd=0&f=tags%3DFresh%2520Pork%257CPrePacked%2520Pork category=pork
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery/meat-free?pg=1 category=meat-alternatives
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?s=popularity&sd=0&f=tags%3DFresh%2520Sausages%257CPreCooked%2520Sausages%257CPrePacked%2520Sausages category=sausages pages=2
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Beef%20%26%20Lamb&refinementList%5Bcategory2NI%5D%5B1%5D=PrePacked%20Beef%20%26%20Lamb category=beef-lamb pages=2
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B1%5D=Frozen%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B2%5D=PrePacked%20Chicken%20%26%20Poultry category=chicken pages=1
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Pork&refinementList%5Bcategory2NI%5D%5B1%5D=PrePacked%20Pork category=pork
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Meat%20Free&refinementList%5Bcategory2NI%5D%5B1%5D=Vegetarian category=meat-alternatives
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Sausages&refinementList%5Bcategory2NI%5D%5B1%5D=PreCooked%20Sausages&refinementList%5Bcategory2NI%5D%5B2%5D=PrePacked%20Sausages category=sausages pages=2
 
 https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/frozen-foods/frozen-savouries?pg=1 category=other-savouries
 
