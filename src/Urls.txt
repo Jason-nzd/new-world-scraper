@@ -1,5 +1,5 @@
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-vegetables?pg=1 pages=2
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-fruit?pg=1 pages=1 category=fruit
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-fruit?pg=1 pages=2 category=fruit
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/fresh-salads?pg=1 category=salads-coleslaw
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-fruit?pg=1 category=fruit
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/fruit--vegetables/prepacked-fresh-vegetables?pg=1 category=fresh-vegetables pages=2
@@ -10,10 +10,10 @@ https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/seafood?pg=1 pag
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/bakery/sliced-bread category=bread
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/bakery/specialty-breads?pg=1 category=specialty-bread
 
-https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/cheese?pg=1
+https://www.newworld.co.nz/shop/category/chilled-frozen-and-desserts/cheese?pg=1 pages=2
 
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Beef%20%26%20Lamb&refinementList%5Bcategory2NI%5D%5B1%5D=PrePacked%20Beef%20%26%20Lamb category=beef-lamb pages=2
-https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B1%5D=Frozen%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B2%5D=PrePacked%20Chicken%20%26%20Poultry category=chicken pages=1
+https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B1%5D=Frozen%20Chicken%20%26%20Poultry&refinementList%5Bcategory2NI%5D%5B2%5D=PrePacked%20Chicken%20%26%20Poultry category=chicken pages=2
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Pork&refinementList%5Bcategory2NI%5D%5B1%5D=PrePacked%20Pork category=pork
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Meat%20Free&refinementList%5Bcategory2NI%5D%5B1%5D=Vegetarian category=meat-alternatives
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/butchery?pg=1&refinementList%5Bcategory2NI%5D%5B0%5D=Fresh%20Sausages&refinementList%5Bcategory2NI%5D%5B1%5D=PreCooked%20Sausages&refinementList%5Bcategory2NI%5D%5B2%5D=PrePacked%20Sausages category=sausages pages=2
@@ -26,7 +26,7 @@ https://www.newworld.co.nz/shop/category/pantry/confectionery/lollies-family-bag
 
 https://www.newworld.co.nz/shop/category/pantry/jams-honey--spreads?pg=1 category=spreads pages=3
 
-https://www.newworld.co.nz/shop/category/pantry/snack-foods?s=popularity&sd=0&f=tags%3DChips%257CCorn%2520Chips%257CPotato%2520Chips category=chips
+https://www.newworld.co.nz/shop/category/pantry/snack-foods?s=popularity&sd=0&f=tags%3DChips%257CCorn%2520Chips%257CPotato%2520Chips category=chips pages=2
 
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/dairy--eggs/eggs?pg=1
 https://www.newworld.co.nz/shop/category/fresh-foods-and-bakery/dairy--eggs?s=popularity&sd=0&f=tags%3DFresh%2520Cream%257CSour%2520Cream%2520%2526%2520Cr%25C3%25A8me%2520Fraiche category=cream
