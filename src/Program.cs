@@ -5,6 +5,7 @@ using static Scraper.CosmosDB;
 using static Scraper.Utilities;
 using System.Text.RegularExpressions;
 using System.Web;
+using Microsoft.Azure.Cosmos.Linq;
 
 // New World Scraper
 // -----------------
@@ -158,11 +159,33 @@ namespace Scraper
                     }
 
                     // Wait for prices to load in
-                    string price = await playwrightPage.GetByTestId("price-dollars").Last.InnerHTMLAsync();
+                    string price =
+                        await playwrightPage.GetByTestId("price-dollars").Last.InnerHTMLAsync();
 
-                    // Query all product card entries, and log how many were found
-                    var productElements = await playwrightPage.QuerySelectorAllAsync("#search > div > div:nth-child(4) > div");
+                    // Get all div elements
+                    var allDivElements =
+                        await playwrightPage.QuerySelectorAllAsync("div");
 
+                    // Filter down to only product div elements which contain a special attribute
+                    List<IElementHandle> productElements = new List<IElementHandle>();
+                    foreach (var div in allDivElements)
+                    {
+                        try
+                        {
+                            // Try get the data-testid attribute of each div element
+                            var dataTestId = div.GetAttributeAsync("data-testid").Result;
+                            if (dataTestId != null && dataTestId.Contains("-EA-000"))
+                            {
+                                productElements.Add(div);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore divs that cannot parse a data-testid
+                        }
+                    }
+
+                    // Log how many valid products were found on this page
                     Log(
                         $"{productElements.Count} Products Found \t" +
                         $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0')}\t" +
@@ -387,6 +410,7 @@ namespace Scraper
             }
 
             // Price - Combine dollar and cent strings, then parse into a float
+            // ----------------------------------------------------------------
             float currentPrice;
             try
             {
@@ -404,6 +428,7 @@ namespace Scraper
             }
 
             // Image URL & Product ID
+            // ----------------------
             string id;
             try
             {
