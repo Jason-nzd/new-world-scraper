@@ -174,7 +174,7 @@ namespace Scraper
                         {
                             // Try get the data-testid attribute of each div element
                             var dataTestId = div.GetAttributeAsync("data-testid").Result;
-                            if (dataTestId != null && dataTestId.Contains("-EA-000"))
+                            if (dataTestId != null && (dataTestId.Contains("-EA-000") || dataTestId.Contains("-KGM-000")))
                             {
                                 productElements.Add(div);
                             }
