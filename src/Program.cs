@@ -141,26 +141,88 @@ namespace Scraper
                         .Replace("&refinementList[category2NI]", " ")
                         .Trim();
 
-                    shortenedLoggingUrl = Regex.Replace(shortenedLoggingUrl, @"\[\d\]=", "- ");
-
                     // Log current sequence of page scrapes, the total num of pages to scrape
                     LogWarn(
                         $"\n[{i + 1}/{categorisedUrls.Count()}] {shortenedLoggingUrl}"
                     );
 
-                    // Try load page and wait for full content to dynamically load in
-                    await playwrightPage!.GotoAsync(url);
-
-                    // Scroll down page to trigger lazy loading
-                    for (int scrollLoop = 0; scrollLoop < 3; scrollLoop++)
+                    // Try load page with upto 3 retries
+                    int maxLoadAttempts = 3;
+                    for (int loadAttempt = 0; loadAttempt < maxLoadAttempts; loadAttempt++)
                     {
-                        await playwrightPage.Keyboard.PressAsync("PageDown");
-                        Thread.Sleep(120);
+                        try
+                        {
+                            // Navigate to the URL
+                            await playwrightPage!.GotoAsync(
+                                url,
+                                new PageGotoOptions() { Timeout = 8000 }
+                            );
+
+                            // Scroll down page to trigger lazy loading
+                            for (int scrollLoop = 0; scrollLoop < 5; scrollLoop++)
+                            {
+                                await playwrightPage.Keyboard.PressAsync("PageDown");
+                                Thread.Sleep(120);
+                            }
+
+                            // Wait for prices to load in
+                            string price =
+                                await playwrightPage.GetByTestId("price-dollars").Last.InnerHTMLAsync();
+
+                            // If successful, break out of load attempt loop
+                            break;
+                        }
+                        catch (Exception)
+                        {
+                            if (loadAttempt == maxLoadAttempts - 1)
+                            {
+                                throw; // re-throw exception if max attempts reached
+                            }
+                            LogWarn(
+                                $"Retrying page load {loadAttempt + 1}/{maxLoadAttempts}..."
+                            );
+                        }
                     }
 
-                    // Wait for prices to load in
-                    string price =
-                        await playwrightPage.GetByTestId("price-dollars").Last.InnerHTMLAsync();
+                    // Detect pagination pages available
+                    int availablePages = 1;
+                    try
+                    {
+                        var paginationElement =
+                            await playwrightPage!.QuerySelectorAllAsync("nav[aria-label='pagination'] > ul");
+                        availablePages =
+                            (await paginationElement[0].QuerySelectorAllAsync("li")).Count - 2; // minus prev/next buttons
+                    }
+                    catch (Exception)
+                    {
+                        // No pagination found, so only 1 page is available
+                        continue;
+                    }
+
+                    // Check if the next url is for the same category but with a higher page number
+                    if (i + 1 < categorisedUrls.Count())
+                    {
+                        CategorisedURL nextCategorisedUrl = categorisedUrls[i + 1];
+                        string nextUrlWithoutPageParam =
+                            nextCategorisedUrl.url.Substring(0, nextCategorisedUrl.url.IndexOf("?") - 1);
+
+                        string currentUrlWithoutPageParam =
+                            url.Substring(0, url.IndexOf("?") - 1);
+
+                        bool nextUrlIsSameCategory = nextUrlWithoutPageParam == currentUrlWithoutPageParam;
+
+                        int nextUrlPageParam =
+                            int.Parse(HttpUtility.ParseQueryString(new Uri(nextCategorisedUrl.url).Query
+                            ).Get("pg") ?? "1");
+
+                        if (nextUrlIsSameCategory && nextUrlPageParam > availablePages)
+                        {
+                            // If the detected available pages is less than the next desired page number,
+                            // invalidate the next url to prevent unnecessary scraping attempts
+                            nextCategorisedUrl.url = "";
+                            categorisedUrls[i + 1] = nextCategorisedUrl;
+                        }
+                    }
 
                     // Get all div elements
                     var allDivElements =
@@ -186,10 +248,14 @@ namespace Scraper
                     }
 
                     // Log how many valid products were found on this page
+                    int currentUrlPageParam =
+                    int.Parse(HttpUtility.ParseQueryString(new Uri(url).Query).Get("pg") ?? "1");
+
                     Log(
-                        $"{productElements.Count} Products Found \t" +
-                        $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0')}\t" +
-                        $"Category: {categorisedUrls[i].category}"
+                        $"{productElements.Count} Products Found \t".PadRight(16) +
+                        $"Total Time Elapsed: {stopwatch.Elapsed.Minutes}:{stopwatch.Elapsed.Seconds.ToString().PadLeft(2, '0').PadRight(8)}\t" +
+                        $"Category: {categorisedUrls[i].category}".PadRight(30) +
+                        $"Page: {currentUrlPageParam}/{availablePages}"
                     );
 
                     // Create per-page counters for logging purposes
