@@ -649,7 +649,7 @@ namespace Scraper
 
                 // Wait for page to automatically reload with the new geo-location
                 Thread.Sleep(4000);
-                await playwrightPage.WaitForSelectorAsync("div.js-quick-links");
+                await playwrightPage.WaitForSelectorAsync("div.ds-mx-auto");
 
                 LogWarn($"Selected Store: {await GetStoreLocationName()}");
                 return;
@@ -668,14 +668,12 @@ namespace Scraper
         {
             try
             {
-                // Get the top ribbon - desktop version
-                var topRibbon = await playwrightPage!.QuerySelectorAsync(".fs-ribbon-items__layout.desktop-only");
-
-                // Get the first span element, which contains the store name
-                var storeLocationElement = await topRibbon!.QuerySelectorAsync("span");
+                // Get the first p element, which contains the store name
+                var storeLocationElement = await playwrightPage!.QuerySelectorAsync("p");
+                var storeLocationText = await storeLocationElement!.InnerTextAsync();
 
                 // Return the store name
-                return await storeLocationElement!.InnerTextAsync();
+                return storeLocationText.Replace("Collect from ", "");
             }
             catch (PlaywrightException)
             {
