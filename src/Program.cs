@@ -1,11 +1,14 @@
-﻿using System.Diagnostics;
+﻿#nullable enable
+using System.Diagnostics;
 using Microsoft.Playwright;
 using Microsoft.Extensions.Configuration;
 using static Scraper.CosmosDB;
 using static Scraper.Utilities;
 using System.Text.RegularExpressions;
+using PlaywrightExtraSharp;
+using PlaywrightExtraSharp.Models;
+using PlaywrightExtraSharp.Plugins.ExtraStealth;
 using System.Web;
-using Microsoft.Azure.Cosmos.Linq;
 
 // New World Scraper
 // -----------------
@@ -18,23 +21,7 @@ namespace Scraper
         static int secondsDelayBetweenPageScrapes = 11;
         static bool uploadToDatabase = false;
         static bool uploadImages = false;
-        static bool useHeadlessBrowser = false;
-
-        public record Product(
-            string id,
-            string name,
-            string? size,
-            float currentPrice,
-            string[] category,
-            string sourceSite,
-            DatedPrice[] priceHistory,
-            DateTime lastUpdated,
-            DateTime lastChecked,
-            float? unitPrice,
-            string? unitName,
-            float? originalUnitQuantity
-        );
-        public record DatedPrice(DateTime date, float price);
+        static bool useHeadlessBrowser = true;
 
         // Singletons for Playwright
         public static IPlaywright? playwright;
@@ -44,7 +31,7 @@ namespace Scraper
 
         // Get config from appsettings.json
         public static IConfiguration config = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true) //load base settings
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)      //load base settings
             .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true) //load local settings
             .AddEnvironmentVariables()
             .Build();
@@ -60,18 +47,7 @@ namespace Scraper
                     uploadToDatabase = true;
 
                     // Connect to CosmosDB - end program if unable to connect
-                    if (!await CosmosDB.EstablishConnection(
-                        db: "supermarket-prices",
-                        partitionKey: "/name",
-                        container: "products"
-                    )) return;
-                }
-
-                // dotnet run db custom-query - will run a pre-defined sql query
-                if (arg.Contains("custom-query"))
-                {
-                    await CustomQuery();
-                    return;
+                    await CosmosDB.EstablishConnection();
                 }
 
                 // dotnet run db images - will scrape, then upload both data and images
@@ -266,16 +242,12 @@ namespace Scraper
                     {
                         // Create validated Product object from playwright element
                         Product? scrapedProduct =
-                            await ScrapeProductElementToRecord(
-                                productElement,
-                                url,
-                                new string[] { categorisedUrls[i].category }
-                            );
+                            await DOMElementToProduct(productElement, categorisedUrls[i].category);
 
                         if (uploadToDatabase && scrapedProduct != null)
                         {
                             // Try upsert to CosmosDB
-                            UpsertResponse response = await CosmosDB.UpsertProduct(scrapedProduct);
+                            UpsertResponse response = await CosmosDB.TransformAndUpsertProduct(scrapedProduct);
 
                             // Increment stats counters based on response from CosmosDB
                             switch (response)
@@ -311,16 +283,21 @@ namespace Scraper
                         }
                         else if (!uploadToDatabase && scrapedProduct != null)
                         {
-                            // In Dry Run mode, print a log row for every product
-                            string unitString = scrapedProduct.unitPrice != null ?
-                                "$" + scrapedProduct.unitPrice + " /" + scrapedProduct.unitName : "";
+                            // In Dry Run mode, prepare a log row for every product
 
-                            Log(
+                            // logUnitPrice is either blank or "$ + {unitPrice}"
+                            string logUnitPrice = "";
+                            if (scrapedProduct.unitPrice != null)
+                                if (scrapedProduct.unitPrice != "")
+                                    logUnitPrice = "$ " + scrapedProduct.unitPrice;
+
+                            // Log completed row entry
+                            Console.WriteLine(
                                 scrapedProduct!.id.PadLeft(9) + " | " +
                                 scrapedProduct.name!.PadRight(60).Substring(0, 60) + " | " +
                                 scrapedProduct.size!.PadRight(10) + " | $" +
                                 scrapedProduct.currentPrice.ToString().PadLeft(5) + " | " +
-                                unitString
+                                logUnitPrice
                             );
                         }
                     }
@@ -374,26 +351,33 @@ namespace Scraper
         {
             try
             {
-                // Launch Playwright Browser - Headless mode doesn't work with some anti-bot mechanisms,
-                //  so a regular browser window may be required.
-                playwright = await Playwright.CreateAsync();
-                browser = await playwright.Chromium.LaunchAsync(
-                    new BrowserTypeLaunchOptions { Headless = headless }
-                );
+                // Initialize Playwright Extra with Chromium
+                var playwrightExtra = new PlaywrightExtra(BrowserTypeEnum.Chromium);
 
-                // Launch Page 
-                playwrightPage = await browser.NewPageAsync();
+                // Install browser
+                playwrightExtra.Install();
+
+                // Use stealth plugin
+                playwrightExtra.Use(new StealthExtraPlugin());
+
+                // Launch the browser
+                await playwrightExtra.LaunchAsync(new()
+                {
+                    Headless = headless
+                });
+
+                // Create a new page
+                playwrightPage = await playwrightExtra.NewPageAsync(
+                    new BrowserNewPageOptions() { }
+                );
 
                 // Route exclusions, such as ads, trackers, etc
                 await RoutePlaywrightExclusions();
                 return;
             }
-            catch (PlaywrightException)
+            catch (Exception e)
             {
-                LogError(
-                    "Browser must be manually installed using: \n" +
-                    "pwsh bin/Debug/net6.0/playwright.ps1 install\n"
-                );
+                LogError(e.Message);
                 throw;
             }
         }
@@ -414,19 +398,18 @@ namespace Scraper
             return imgUrl;
         }
 
-        // ScrapeProductElementToRecord()
+        // DOMElementToProduct()
         // ------------------------------
         // Takes a playwright element "div.fs-product-card", scrapes each of the desired data fields,
         // and then returns a validated Product record
 
-        private async static Task<Product?> ScrapeProductElementToRecord(
+        private async static Task<Product?> DOMElementToProduct(
             IElementHandle productElement,
-            string sourceUrl,
-            string[] category
+            string category
         )
         {
             // Product Name, Size, Dollar and Cent Price as strings
-            string name = "", size = "", dollarString = "", centString = "";
+            string name = "", size = "", dollarString = "", centString = "", unitPrice = "";
 
             // Get all <p> elements, then loop through each and assign values 
             // based on the data-testid attribute.
@@ -513,10 +496,109 @@ namespace Scraper
                 return null;
             }
 
-            // try
-            // {
-            //     // If product size is listed as 'ea' or 'pk' and a unit price is listed,
-            //     // try to derive the full product size from the unit price
+            // Unit Price - Scrape the unit price if it is listed
+            // --------------------------------------------------
+            // Examples: $1.64/1L
+            string? unitName;
+            float? unitNum;
+            try
+            {
+                // Loop all <p> tags starting from the bottom, where the unit price usually is
+                string scrapedUnitPriceString = "";
+                for (int index = allPElements.Count - 1; index >= 0; index--)
+                {
+                    var pTag = allPElements[index];
+                    string innerText = await pTag.InnerTextAsync();
+
+                    // Find the correct <p> tag containing the unit price string using regex.
+                    // Regex match to ensure it has leading $, digits, and /
+                    if (Regex.Match(innerText, @"\$\d*.?\d*/").Success)
+                    {
+                        scrapedUnitPriceString = innerText;
+                        break;
+                    }
+                }
+
+                // If a valid unit price string was found, separate it and process further
+                if (scrapedUnitPriceString != "")
+                {
+                    // Get amount (Ex: 1.64) and unit (Ex: 1L)
+                    string amountString = scrapedUnitPriceString.Split("/")[0].Replace("$", "");
+                    unitNum = float.Parse(amountString);
+                    unitName = scrapedUnitPriceString.Split("/")[1];
+
+                    // Standardize ml to L, such as 300ml = 0.3L
+                    if (Regex.IsMatch(unitName, @"\d*(ml|mL)"))
+                    {
+                        int mlAmount = int.Parse(unitName.ToLower().Replace("ml", ""));
+                        float multiplierToGet1L = 1000 / mlAmount;
+                        unitNum = (float)Math.Round((decimal)(unitNum * multiplierToGet1L), 2);
+                        unitName = "L";
+                    }
+
+                    // Standardize g to kg, such as 300g = 0.3kg
+                    if (Regex.IsMatch(unitName, @"\d+g\b"))
+                    {
+                        int gramAmount = int.Parse(unitName.ToLower().Replace("g", ""));
+                        float multiplierToGet1kg = 1000 / gramAmount;
+                        unitNum = (float)Math.Round((decimal)(unitNum * multiplierToGet1kg), 2);
+                        unitName = "kg";
+                    }
+
+                    // Standardize 1L and 1kg units
+                    if (unitName == "1L") unitName = "L";
+                    if (unitName == "1kg") unitName = "kg";
+
+                    // Set unitPrice (string)
+                    unitPrice = unitName.Length > 0 ? unitNum + "/" + unitName : "";
+
+                    // Size - If product size is missing, derive from the unit price
+                    // -------------------------------------------------------------
+                    if (size == "")
+                    {
+                        // Calculate sizes to 2, 1, and 0 decimal points
+                        double derivedSize2decimal = Math.Round((double)(currentPrice / unitNum), 2);
+                        double derivedSize1decimal = Math.Round((double)(currentPrice / unitNum), 1);
+                        double derivedSize = Math.Round((double)(currentPrice / unitNum), 0);
+
+                        // If the 1 decimal point version is close enough to the more accurate 2 decimal point,
+                        //  use that instead for readability.
+                        if (Math.Abs(derivedSize1decimal - derivedSize2decimal) < 0.03)
+                            size = derivedSize1decimal.ToString() + unitName;
+                        else
+                            size = derivedSize2decimal.ToString() + unitName;
+
+                        // Set size to pk if unit size is /ea
+                        if (unitName == "ea" || unitName == "each")
+                        {
+                            size = Math.Round(derivedSize, 0).ToString() + "pk";
+                        }
+
+                        // Normalize 0.99kg or less sizes to grams
+                        if (Regex.Match(size, @"0.\d*kg").Success)
+                        {
+                            float kgFloatSize = float.Parse(size.Replace("kg", ""));
+                            double gramSize = Math.Round(kgFloatSize * 1000, 0);
+                            size = gramSize.ToString() + "g";
+                        }
+
+                        // Normalize 0.99L or less sizes to ml
+                        if (Regex.Match(size, @"0.\d*L").Success)
+                        {
+                            float litreFloatSize = float.Parse(size.Replace("L", ""));
+                            double mlSize = Math.Round(litreFloatSize * 1000, 0);
+                            size = mlSize.ToString() + "ml";
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LogError($"{name} - Couldn't process unit price\n{e.GetType()}");
+                return null;
+            }
+            // If product size is listed as 'ea' or 'pk' and a unit price is listed,
+            // try to derive the full product size from the unit price
             //     var unitPriceDiv = await productElement.QuerySelectorAsync(".fs-product-card__price-per-unit");
             //     if (Regex.IsMatch(size, @"\d?(ea|pk)\b") && unitPriceDiv != null)
             //     {
@@ -555,6 +637,9 @@ namespace Scraper
             //             size = Math.Round(fullProductSize, 2) + unitPriceName;
             //         }
             //     }
+            //     // If no unit price scraped, try derive from size
+            //     if (unitPrice == "")
+            //         unitPrice = DeriveUnitPriceString(size, currentPrice)!;
             // }
             // catch (Exception e)
             // {
@@ -562,6 +647,8 @@ namespace Scraper
             //     return null;
             // }
 
+            // Manual Product Data Overrides from ProductOverrides.txt
+            // -------------------------------------------------------
             try
             {
                 // Check for manual product data overrides based on product ID
@@ -572,55 +659,25 @@ namespace Scraper
                     throw new Exception(name + " is overridden as an invalid product.");
 
                 // If override lists a sizes or category, use these instead of the scraped values.
-                if (overrides.size != "") size = overrides.size;
-                if (overrides.category != "") category = new string[] { overrides.category };
+                if (overrides.size != "")
+                {
+                    size = overrides.size;
+                    unitPrice = DeriveUnitPriceString(size, currentPrice)!;
+                }
+                if (overrides.category != "") category = overrides.category;
 
                 // Set source website
                 string sourceSite = "newworld.co.nz";
 
-                // Create a DateTime object for the current time, but set minutes and seconds to zero
-                DateTime todaysDate = DateTime.UtcNow;
-                todaysDate = new DateTime(
-                    todaysDate.Year,
-                    todaysDate.Month,
-                    todaysDate.Day,
-                    todaysDate.Hour,
-                    0,
-                    0
-                );
-
-                // Create a DatedPrice for the current time and price
-                DatedPrice todaysDatedPrice = new DatedPrice(todaysDate, currentPrice);
-
-                // Create Price History array with a single element
-                DatedPrice[] priceHistory = new DatedPrice[] { todaysDatedPrice };
-
-                // Get derived unit price and unit name
-                string? unitPriceString = DeriveUnitPriceString(size, currentPrice);
-                float? unitPrice = null;
-                string? unitName = "";
-                float? originalUnitQuantity = null;
-                if (unitPriceString != null)
-                {
-                    unitPrice = float.Parse(unitPriceString.Split("/")[0]);
-                    unitName = unitPriceString.Split("/")[1];
-                    originalUnitQuantity = float.Parse(unitPriceString.Split("/")[2]);
-                }
-
                 // Create product record with above values
                 Product product = new Product(
-                    id,
-                    name!,
-                    size,
-                    currentPrice,
-                    category,
-                    sourceSite,
-                    priceHistory,
-                    todaysDate,
-                    todaysDate,
-                    unitPrice,
-                    unitName,
-                    originalUnitQuantity
+                    id: id,
+                    name: name,
+                    size: size,
+                    category: category,
+                    sourceSite: sourceSite,
+                    currentPrice: currentPrice,
+                    unitPrice: unitPrice
                 );
 
                 // Validate then return completed product
