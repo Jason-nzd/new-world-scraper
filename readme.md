@@ -3,7 +3,7 @@
 [![Playwright](https://img.shields.io/badge/Playwright-Extra-2EAD33?logo=playwright)](https://playwright.dev/)
 
 A powerful web scraper that extracts product pricing and information from the **New World NZ** website. Logs data to console and optionally stores price history in Azure CosmosDB.
-The data is laid out the same as PaknSave's website most of the time, but these sites go through major changes on different intervals.
+The data is laid out the same as **PaknSave's** website most of the time, but these sites go through major changes on different intervals.
 
 ## ✨ Features
 - 🎭 **Headless Browser** — Powered by **Playwright** & **PlaywrightExtraSharp2**
@@ -19,7 +19,7 @@ The data is laid out the same as PaknSave's website most of the time, but these 
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/Jason-nzd/pakn-scraper
+git clone https://github.com/Jason-nzd/new-world-scraper
 cd src
 
 # Restore and build dependencies
