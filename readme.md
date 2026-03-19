@@ -1,4 +1,4 @@
-# 🛒 Pak'n'Save Scraper
+# New World Scraper
 [![.NET](https://img.shields.io/badge/.NET-8.0+-5C2D91?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Playwright](https://img.shields.io/badge/Playwright-Extra-2EAD33?logo=playwright)](https://playwright.dev/)
 
