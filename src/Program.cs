@@ -706,7 +706,7 @@ namespace Scraper
 
                 // Wait for page to automatically reload with the new geo-location
                 Thread.Sleep(4000);
-                await playwrightPage.WaitForSelectorAsync("div.ds-mx-auto");
+                await playwrightPage.WaitForSelectorAsync("#product-carousel-heading");
 
                 LogWarn($"Selected Store: {await GetStoreLocationName()}");
                 return;
